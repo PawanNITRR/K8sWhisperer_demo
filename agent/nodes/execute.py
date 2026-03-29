@@ -68,7 +68,7 @@ def _verify_workload(
     return f"Verification timed out after {VERIFY_MAX_WAIT_SEC}s. Last note: {last}"
 
 
-def _patch_memory_bump(k: KubectlMCP, namespace: str, deployment: str, pct: float) -> str:
+def _patch_resource_bump(k: KubectlMCP, namespace: str, deployment: str, pct: float, resource_type: str) -> str:
     out = k.run(["get", "deployment", "-n", namespace, deployment, "-o", "json"])
     dep = json.loads(out)
     containers = dep["spec"]["template"]["spec"]["containers"]
@@ -77,16 +77,16 @@ def _patch_memory_bump(k: KubectlMCP, namespace: str, deployment: str, pct: floa
         res = dict(c.get("resources") or {})
         limits = dict((res.get("limits") or {}))
         reqs = dict((res.get("requests") or {}))
-        mem_lim = limits.get("memory")
-        if mem_lim and isinstance(mem_lim, str):
-            num, suf = _parse_quantity(mem_lim)
+        resource_lim = limits.get(resource_type)
+        if resource_lim and isinstance(resource_lim, str):
+            num, suf = _parse_quantity(resource_lim)
             if num is not None and suf:
-                limits["memory"] = f"{int(num * (1.0 + pct))}{suf}"
-        mem_req = reqs.get("memory")
-        if mem_req and isinstance(mem_req, str):
-            num, suf = _parse_quantity(mem_req)
+                limits[resource_type] = f"{int(num * (1.0 + pct))}{suf}"
+        resource_req = reqs.get(resource_type)
+        if resource_req and isinstance(resource_req, str):
+            num, suf = _parse_quantity(resource_req)
             if num is not None and suf:
-                reqs["memory"] = f"{int(num * (1.0 + pct))}{suf}"
+                reqs[resource_type] = f"{int(num * (1.0 + pct))}{suf}"
         res["limits"] = limits
         res["requests"] = reqs
         nc = dict(c)
@@ -140,16 +140,33 @@ def execute_node(state: AgentState) -> dict[str, Any]:
                 dep_name = infer_deployment_name(k, plan.target.namespace, plan.target.name)
             if not dep_name:
                 return {"result": "PATCH_RESOURCE_LIMITS requires deployment name in parameters or inferable owner."}
-            pct = float((plan.parameters or {}).get("bump_memory_pct", 0.5))
-            patch_out = _patch_memory_bump(k, plan.target.namespace, dep_name, pct)
-            _ = k.run(["rollout", "restart", "-n", plan.target.namespace, f"deployment/{dep_name}"])
-            plan2 = plan.model_copy(update={"parameters": {**(plan.parameters or {}), "deployment": dep_name}})
-            ver = _verify_workload(k, plan2, start, pod_deleted=True)
-            return {
-                "result": (
-                    f"Patched deployment/{dep_name} memory (+{pct:.0%}) and restarted rollout.\n{patch_out}\n\n{ver}"
-                )
-            }
+
+            # Handle memory bump
+            mem_pct = float((plan.parameters or {}).get("bump_memory_pct", 0))
+            cpu_pct = float((plan.parameters or {}).get("bump_cpu_pct", 0))
+
+            if mem_pct > 0:
+                patch_out = _patch_resource_bump(k, plan.target.namespace, dep_name, mem_pct, "memory")
+                _ = k.run(["rollout", "restart", "-n", plan.target.namespace, f"deployment/{dep_name}"])
+                plan2 = plan.model_copy(update={"parameters": {**(plan.parameters or {}), "deployment": dep_name}})
+                ver = _verify_workload(k, plan2, start, pod_deleted=True)
+                return {
+                    "result": (
+                        f"Patched deployment/{dep_name} memory (+{mem_pct:.0%}) and restarted rollout.\n{patch_out}\n\n{ver}"
+                    )
+                }
+            elif cpu_pct > 0:
+                patch_out = _patch_resource_bump(k, plan.target.namespace, dep_name, cpu_pct, "cpu")
+                _ = k.run(["rollout", "restart", "-n", plan.target.namespace, f"deployment/{dep_name}"])
+                plan2 = plan.model_copy(update={"parameters": {**(plan.parameters or {}), "deployment": dep_name}})
+                ver = _verify_workload(k, plan2, start, pod_deleted=True)
+                return {
+                    "result": (
+                        f"Patched deployment/{dep_name} CPU (+{cpu_pct:.0%}) and restarted rollout.\n{patch_out}\n\n{ver}"
+                    )
+                }
+            else:
+                return {"result": "PATCH_RESOURCE_LIMITS requires bump_memory_pct or bump_cpu_pct parameter."}
 
         if plan.action in (ActionType.NO_OP, ActionType.RECOMMEND_ONLY):
             return {"result": "No kubectl write performed (no_op/recommend_only)."}

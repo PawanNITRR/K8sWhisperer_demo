@@ -16,6 +16,7 @@ from agent.rule_detector import (
     detect_from_nodes,
     detect_from_pod_items,
 )
+from agent.rule_engine import detect_cpu_throttling
 from agent.state import AgentState
 from mcp_servers.kubectl_mcp import get_kubectl_client
 from utils.structured_logger import get_logger
@@ -74,6 +75,13 @@ def detect_node(state: AgentState) -> dict[str, Any]:
     rule_based.extend(detect_from_pod_items(pods))
     rule_based.extend(detect_from_nodes(nodes))
     rule_based.extend(detect_deployment_stalled(deps))
+
+    # Add CPU throttling detection from Prometheus metrics
+    prom_metrics = cluster.get("prometheus_snippets", {})
+    cpu_anomalies = detect_cpu_throttling(prom_metrics)
+    for anomaly_dict in cpu_anomalies:
+        anomaly = Anomaly.model_validate(anomaly_dict)
+        rule_based.append(anomaly)
 
     llm_anomalies: list[Anomaly] = []
     try:

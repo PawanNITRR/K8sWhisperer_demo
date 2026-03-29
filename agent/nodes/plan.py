@@ -5,7 +5,7 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from schemas.enums import ActionType, AnomalyType, BlastRadius
+from agent.rule_engine import generate_plan_for_anomaly
 from schemas.models import RemediationPlan
 from agent.llm_factory import get_chat_model
 from agent.prompts_util import load_prompt
@@ -75,6 +75,15 @@ def plan_node(state: AgentState) -> dict[str, Any]:
         return {"plan": None}
 
     diagnosis = state.get("diagnosis") or ""
+
+    # Try rule-based planning first
+    plan = generate_plan_for_anomaly(primary)
+    if plan is not None:
+        log.info("Using rule-based plan: action=%s blast=%s", plan.action, plan.blast_radius)
+        return {"plan": plan.model_dump(mode="json")}
+
+    # Fallback to LLM planning
+    log.info("No rule-based plan found, using LLM planning")
     model = get_chat_model()
     structured = model.with_structured_output(RemediationPlan)
     sys = load_prompt("plan_system.txt")
