@@ -12,6 +12,7 @@ from agent.state import AgentState
 from mcp_servers.kubectl_mcp import get_kubectl_client
 from schemas.constants import LOG_MAX_CHARS, LOG_TAIL_LINES
 from utils.log_chunker import prepare_logs_for_llm
+from utils.log_summarizer import summarize_logs_plain_english
 from utils.structured_logger import get_logger
 
 log = get_logger(__name__)
@@ -40,6 +41,10 @@ def diagnose_node(state: AgentState) -> dict[str, Any]:
 
     if ar.kind == "Pod" and logs_txt:
         logs_txt = prepare_logs_for_llm(logs_txt, tail_line_count=LOG_TAIL_LINES, max_chars=LOG_MAX_CHARS)
+        # Convert messy logs to plain English summary
+        logs_summary = summarize_logs_plain_english(logs_txt)
+    else:
+        logs_summary = "No pod logs available for analysis."
 
     model = get_chat_model()
     structured = model.with_structured_output(DiagnosisOutcome)
@@ -47,7 +52,7 @@ def diagnose_node(state: AgentState) -> dict[str, Any]:
     payload = {
         "anomaly": primary,
         "describe": describe_txt[:80_000],
-        "logs": logs_txt[:80_000],
+        "logs": logs_summary,  # Use plain English summary instead of raw logs
     }
     msg = HumanMessage(content=json.dumps(payload, default=str))
     try:

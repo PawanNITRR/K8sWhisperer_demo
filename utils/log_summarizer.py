@@ -1,54 +1,9 @@
-from __future__ import annotations
+"""
+LLM-based log processing functions.
+Separated to avoid circular imports.
+"""
 
-import re
-
-ERROR_HINTS = re.compile(
-    r"(error|fatal|exception|oom|killed|panic|traceback|failed|denied|forbidden)",
-    re.IGNORECASE,
-)
-
-
-def tail_lines(text: str, max_lines: int = 100) -> str:
-    lines = text.splitlines()
-    if len(lines) <= max_lines:
-        return text
-    return "\n".join(lines[-max_lines:])
-
-
-def trim_to_max_chars(text: str, max_chars: int) -> str:
-    if len(text) <= max_chars:
-        return text
-    return text[-max_chars:]
-
-
-def extract_error_snippets(text: str, max_chunks: int = 20) -> list[str]:
-    lines = text.splitlines()
-    hits: list[str] = []
-    for line in lines:
-        if ERROR_HINTS.search(line):
-            hits.append(line.strip())
-        if len(hits) >= max_chunks:
-            break
-    return hits
-
-
-def prepare_logs_for_llm(
-    raw_logs: str,
-    *,
-    tail_line_count: int = 100,
-    max_chars: int = 48_000,
-) -> str:
-    """
-    Reduce kubectl log noise: last N lines, trim to max chars, prepend error-like lines.
-    """
-    tailed = tail_lines(raw_logs, tail_line_count)
-    snippets = extract_error_snippets(tailed)
-    body = trim_to_max_chars(tailed, max_chars)
-    if snippets:
-        header = "[Likely error lines]\n" + "\n".join(snippets[:30]) + "\n\n[Log tail]\n"
-    else:
-        header = "[Log tail]\n"
-    return header + body
+from typing import Any
 
 
 def summarize_logs_plain_english(raw_logs: str) -> str:
@@ -61,19 +16,19 @@ def summarize_logs_plain_english(raw_logs: str) -> str:
 
     # Quick pattern-based analysis first
     lines = raw_logs.splitlines()
-    error_lines = [line for line in lines if ERROR_HINTS.search(line)]
+    error_lines = [line for line in lines if "error" in line.lower() or "fatal" in line.lower() or "exception" in line.lower()]
 
     # Categorize the type of issue
     issue_type = "unknown"
-    if any(pattern.search(raw_logs) for pattern in CRASHLOOP_PATTERNS):
+    if "crashloopbackoff" in raw_logs.lower() or "back-off restarting failed container" in raw_logs.lower():
         issue_type = "crash_loop"
-    elif any(pattern.search(raw_logs) for pattern in OOM_PATTERNS):
+    elif "outofmemory" in raw_logs.lower() or "oom" in raw_logs.lower() or "killed" in raw_logs.lower():
         issue_type = "out_of_memory"
-    elif any(pattern.search(raw_logs) for pattern in IMAGE_PULL_PATTERNS):
+    elif "imagepullbackoff" in raw_logs.lower() or "errimagepull" in raw_logs.lower():
         issue_type = "image_pull_failure"
-    elif any(pattern.search(raw_logs) for pattern in NETWORK_PATTERNS):
+    elif "connection refused" in raw_logs.lower() or "connection reset" in raw_logs.lower():
         issue_type = "network_issue"
-    elif any(pattern.search(raw_logs) for pattern in STARTUP_PATTERNS):
+    elif "readiness probe failed" in raw_logs.lower() or "liveness probe failed" in raw_logs.lower():
         issue_type = "startup_failure"
 
     # Prepare a focused summary for LLM
@@ -94,6 +49,10 @@ Error lines: {len(error_lines)}
 """
 
     try:
+        # Import here to avoid circular imports
+        from langchain_core.messages import HumanMessage, SystemMessage
+        from agent.llm_factory import get_chat_model
+
         model = get_chat_model()
         system_prompt = """You are a Kubernetes expert. Convert these messy container logs into a simple, clear plain English explanation.
 
@@ -129,7 +88,7 @@ def _fallback_log_summary(raw_logs: str, issue_type: str) -> str:
     """Fallback summary when LLM fails."""
     lines = raw_logs.splitlines()
     total_lines = len(lines)
-    error_count = len([line for line in lines if ERROR_HINTS.search(line)])
+    error_count = len([line for line in lines if "error" in line.lower() or "fatal" in line.lower() or "exception" in line.lower()])
 
     if issue_type == "crash_loop":
         return f"Container is crashing and restarting repeatedly. Found {error_count} error indications in {total_lines} total log lines. The application appears to be failing immediately after startup."
@@ -146,46 +105,3 @@ def _fallback_log_summary(raw_logs: str, issue_type: str) -> str:
             return f"Application has encountered errors. Found {error_count} error indications in {total_lines} total log lines. The logs show various issues that need investigation."
         else:
             return f"Application appears to be running normally. No obvious errors found in {total_lines} log lines. The container seems healthy."
-
-
-def tail_lines(text: str, max_lines: int = 100) -> str:
-    lines = text.splitlines()
-    if len(lines) <= max_lines:
-        return text
-    return "\n".join(lines[-max_lines:])
-
-
-def trim_to_max_chars(text: str, max_chars: int) -> str:
-    if len(text) <= max_chars:
-        return text
-    return text[-max_chars:]
-
-
-def extract_error_snippets(text: str, max_chunks: int = 20) -> list[str]:
-    lines = text.splitlines()
-    hits: list[str] = []
-    for line in lines:
-        if ERROR_HINTS.search(line):
-            hits.append(line.strip())
-        if len(hits) >= max_chunks:
-            break
-    return hits
-
-
-def prepare_logs_for_llm(
-    raw_logs: str,
-    *,
-    tail_line_count: int = 100,
-    max_chars: int = 48_000,
-) -> str:
-    """
-    Reduce kubectl log noise: last N lines, trim to max chars, prepend error-like lines.
-    """
-    tailed = tail_lines(raw_logs, tail_line_count)
-    snippets = extract_error_snippets(tailed)
-    body = trim_to_max_chars(tailed, max_chars)
-    if snippets:
-        header = "[Likely error lines]\n" + "\n".join(snippets[:30]) + "\n\n[Log tail]\n"
-    else:
-        header = "[Log tail]\n"
-    return header + body

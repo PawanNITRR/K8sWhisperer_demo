@@ -24,7 +24,19 @@ class KubectlMock:
         return f"Mock describe pod {namespace}/{name}"
 
     def logs_pod(self, namespace: str, name: str, tail: int = 100) -> str:
-        return "Error: CrashLoopBackOff detected"
+        # More realistic mock logs that simulate common Kubernetes issues
+        return """2026-03-30 00:54:00,123 INFO Starting application server on port 8080
+2026-03-30 00:54:01,456 INFO Database connection established
+2026-03-30 00:54:02,789 INFO Loading configuration from /app/config.yaml
+2026-03-30 00:54:03,012 ERROR Failed to connect to redis service: Connection refused
+2026-03-30 00:54:03,123 WARN Retrying database connection in 5 seconds
+2026-03-30 00:54:08,456 ERROR Database connection timeout after 3 attempts
+2026-03-30 00:54:08,567 FATAL Application startup failed: Unable to establish required connections
+2026-03-30 00:54:08,678 INFO Shutting down gracefully...
+2026-03-30 00:54:08,789 ERROR java.lang.RuntimeException: Service unavailable
+        at com.example.App.start(App.java:45)
+        at com.example.Main.main(Main.java:12)
+2026-03-30 00:54:08,890 INFO Process terminated with exit code 1"""
 
     def get_pod_json(self, namespace: str, name: str) -> dict[str, Any]:
         return {"metadata": {"name": name}}
