@@ -42,7 +42,7 @@ LLM_PROVIDER=mock
 
 # API Settings
 API_HOST=0.0.0.0
-API_PORT=8000
+API_PORT=8080
 
 # Slack Integration (optional)
 SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
@@ -55,7 +55,7 @@ SLACK_SIGNING_SECRET=your-signing-secret
 set MOCK_CLUSTER=1
 set LLM_PROVIDER=mock
 set API_HOST=0.0.0.0
-set API_PORT=8000
+set API_PORT=8080
 ```
 
 ## Step 3: Test MCP Servers (Optional)
@@ -97,7 +97,7 @@ python main.py
 
 ### Expected Startup Logs
 ```
-INFO:K8sWhisperer started: poll=30s api=http://0.0.0.0:8000 health=/health slack=/slack/interactions
+INFO:K8sWhisperer started: poll=30s api=http://0.0.0.0:8080 health=/health slack=/slack/interactions
 INFO:Observe cycle abc123...: events=10 pods=5 nodes=1
 ```
 
@@ -112,7 +112,7 @@ INFO:Observe cycle abc123...: events=10 pods=5 nodes=1
 ### Check API Health
 ```bash
 # In another terminal
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 # Expected: {"status": "healthy", "mcp_servers": {...}}
 ```
 
