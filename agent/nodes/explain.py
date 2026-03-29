@@ -54,7 +54,7 @@ def explain_node(state: AgentState) -> dict[str, Any]:
     audit.append(entry)
     log.info("Audit: %s", summary[:160])
 
-    if settings.slack_channel_id and settings.slack_bot_token:
+    if settings.slack_channel_id and settings.slack_bot_token and state.get("should_alert", False):
         try:
             slack = SlackMCP()
             slack.post_plain_text(channel=settings.slack_channel_id, text=f"K8sWhisperer: {summary[:2800]}")

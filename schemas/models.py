@@ -47,6 +47,11 @@ class LogEntry(BaseModel):
     action_taken: str | None = None
 
 
+class AlertDecision(BaseModel):
+    should_alert: bool
+    reason: str
+
+
 class ClusterSnapshot(BaseModel):
     """Structured view built in Observe (normalized cluster state)."""
 

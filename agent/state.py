@@ -26,6 +26,10 @@ class AgentState(TypedDict, total=False):
     approved: bool | None
     result: str
 
+    # Alert decision
+    should_alert: bool
+    alert_reason: str
+
     # Correlation
     cycle_id: str
     graph_thread_id: str

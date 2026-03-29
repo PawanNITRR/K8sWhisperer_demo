@@ -3,6 +3,7 @@ from __future__ import annotations
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 
+from agent.nodes.alert_decision import alert_decision_node
 from agent.nodes.detect import detect_node
 from agent.nodes.diagnose import diagnose_node
 from agent.nodes.execute import execute_node
@@ -46,6 +47,7 @@ def build_graph():
     g.add_node("plan", plan_node)
     g.add_node("safety_gate", safety_gate_node)
     g.add_node("execute", execute_node)
+    g.add_node("alert_decision", alert_decision_node)
     g.add_node("hitl", hitl_node)
     g.add_node("explain", explain_node)
 
@@ -56,7 +58,8 @@ def build_graph():
     g.add_conditional_edges("plan", route_after_plan, {"safety_gate": "safety_gate", "explain": "explain"})
     g.add_conditional_edges("safety_gate", route_after_safety, {"execute": "execute", "hitl": "hitl"})
     g.add_conditional_edges("hitl", route_after_hitl, {"execute": "execute", "explain": "explain"})
-    g.add_edge("execute", "explain")
+    g.add_edge("execute", "alert_decision")
+    g.add_edge("alert_decision", "explain")
     g.add_edge("explain", END)
 
     return g.compile(checkpointer=MemorySaver())
