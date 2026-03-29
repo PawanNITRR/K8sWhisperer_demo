@@ -37,8 +37,23 @@ Create a file named `.env` in the project root with:
 # Use mock cluster for testing (recommended)
 MOCK_CLUSTER=1
 
-# LLM Configuration (use mock for demo)
+# LLM Configuration (use mock for demo, gemini for real AI)
 LLM_PROVIDER=mock
+
+# For Gemini API (Google AI Studio)
+# LLM_PROVIDER=gemini
+# GEMINI_API_KEY=your-gemini-api-key-here
+# GEMINI_MODEL=gemini-2.0-flash-exp
+
+# For OpenAI
+# LLM_PROVIDER=openai
+# OPENAI_API_KEY=sk-your-openai-key
+# OPENAI_MODEL=gpt-4o-mini
+
+# For Anthropic
+# LLM_PROVIDER=anthropic
+# ANTHROPIC_API_KEY=sk-ant-your-anthropic-key
+# ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 
 # API Settings
 API_HOST=0.0.0.0
@@ -48,14 +63,28 @@ API_PORT=8080
 SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
 SLACK_CHANNEL_ID=C1234567890
 SLACK_SIGNING_SECRET=your-signing-secret
+
+# Persistence (optional - defaults shown)
+AUDIT_LOG_PATH=audit_log.json
+STATE_STORE_PATH=data/state_store.json
+```
+
+**Important:** Replace `your-gemini-api-key-here` with your actual Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey).
 ```
 
 ### Alternative: Set Environment Variables Directly
 ```bash
 set MOCK_CLUSTER=1
-set LLM_PROVIDER=mock
+set LLM_PROVIDER=gemini
+set GEMINI_API_KEY=your-gemini-api-key-here
+set GEMINI_MODEL=gemini-2.0-flash-exp
 set API_HOST=0.0.0.0
 set API_PORT=8080
+set SLACK_BOT_TOKEN=xoxb-your-token
+set SLACK_CHANNEL_ID=C1234567890
+set SLACK_SIGNING_SECRET=your-secret
+set AUDIT_LOG_PATH=audit_log.json
+set STATE_STORE_PATH=data/state_store.json
 ```
 
 ## Step 3: Test MCP Servers (Optional)
@@ -88,6 +117,16 @@ print('Slack MCP Health:', s.health())
 "
 ```
 
+### Send Test Slack Message
+```bash
+python -c "
+from mcp_servers.slack_mcp import get_slack_client
+s = get_slack_client()
+s.post_plain_text('YOUR_CHANNEL_ID', 'Hello from K8sWhisperer! 🚀')
+print('Test message sent to Slack!')
+"
+```
+
 ## Step 4: Run the Project
 
 ### Start the System
@@ -113,7 +152,7 @@ INFO:Observe cycle abc123...: events=10 pods=5 nodes=1
 ```bash
 # In another terminal
 curl http://localhost:8080/health
-# Expected: {"status": "healthy", "mcp_servers": {...}}
+# Expected: {"status": "ok"}
 ```
 
 ### Watch Logs in Real-Time
@@ -253,7 +292,7 @@ python main.py
 
 ### Import Errors
 ```bash
-pip install pydantic pydantic-settings langchain langchain-core langgraph requests
+pip install pydantic pydantic-settings langchain langchain-core langgraph requests slack-sdk
 ```
 
 ### Port Already in Use
@@ -269,11 +308,17 @@ python main.py
 
 ### LLM Errors
 - Use LLM_PROVIDER=mock for testing
-- Check API keys for real LLM providers
+- For Gemini: Get API key from [Google AI Studio](https://makersuite.google.com/app/apikey) and set GEMINI_API_KEY
+- For OpenAI: Get API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+- For Anthropic: Get API key from [Anthropic Console](https://console.anthropic.com/)
+- Check API keys are set correctly in .env
+- Test LLM loading: `python -c "from agent.llm_factory import get_chat_model; print(type(get_chat_model()).__name__)"`
 
 ### Slack Not Working
 - Verify SLACK_BOT_TOKEN and SLACK_CHANNEL_ID
 - Check Slack app permissions
+- Ensure slack-sdk is installed: `pip install slack-sdk`
+- Test MCP health with the Slack MCP Test above
 
 ## Demo Script
 

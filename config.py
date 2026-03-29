@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-3-5-sonnet-20241022"
     # Google AI / Gemini (same key as in Google AI Studio)
     gemini_api_key: str | None = None
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-2.0-flash-exp"
 
     # kubectl: optional full path to kubectl.exe (else looks for tools/kubectl.exe, then PATH "kubectl")
     kubectl_path: str | None = None

@@ -38,3 +38,14 @@ class SlackMCP(BaseMCP):
         res = requests.post(url, json=payload, headers=headers)
         if not res.ok or not res.json().get("ok"):
             raise RuntimeError(f"Slack API error: {res.text}")
+
+
+# ---------- SINGLETON ----------
+_slack_client: SlackMCP | None = None
+
+
+def get_slack_client():
+    global _slack_client
+    if _slack_client is None:
+        _slack_client = SlackMCP()
+    return _slack_client
