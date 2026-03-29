@@ -18,13 +18,13 @@ from agent.state import AgentState
 def route_after_detect(state: AgentState) -> str:
     if state.get("primary_anomaly"):
         return "diagnose"
-    return "explain"
+    return "alert_decision"
 
 
 def route_after_plan(state: AgentState) -> str:
     if state.get("plan"):
         return "safety_gate"
-    return "explain"
+    return "alert_decision"
 
 
 def route_after_safety(state: AgentState) -> str:
@@ -36,7 +36,7 @@ def route_after_safety(state: AgentState) -> str:
 def route_after_hitl(state: AgentState) -> str:
     if state.get("approved"):
         return "execute"
-    return "explain"
+    return "alert_decision"
 
 
 def build_graph():
@@ -53,11 +53,11 @@ def build_graph():
 
     g.add_edge(START, "observe")
     g.add_edge("observe", "detect")
-    g.add_conditional_edges("detect", route_after_detect, {"diagnose": "diagnose", "explain": "explain"})
+    g.add_conditional_edges("detect", route_after_detect, {"diagnose": "diagnose", "alert_decision": "alert_decision"})
     g.add_edge("diagnose", "plan")
-    g.add_conditional_edges("plan", route_after_plan, {"safety_gate": "safety_gate", "explain": "explain"})
+    g.add_conditional_edges("plan", route_after_plan, {"safety_gate": "safety_gate", "alert_decision": "alert_decision"})
     g.add_conditional_edges("safety_gate", route_after_safety, {"execute": "execute", "hitl": "hitl"})
-    g.add_conditional_edges("hitl", route_after_hitl, {"execute": "execute", "explain": "explain"})
+    g.add_conditional_edges("hitl", route_after_hitl, {"execute": "execute", "alert_decision": "alert_decision"})
     g.add_edge("execute", "alert_decision")
     g.add_edge("alert_decision", "explain")
     g.add_edge("explain", END)
