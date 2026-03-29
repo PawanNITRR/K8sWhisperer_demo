@@ -1,29 +1,35 @@
 from __future__ import annotations
 
-from schemas.enums import ActionType
 from schemas.models import RemediationPlan
+from schemas.enums import ActionType, BlastRadius
 
 
 class RBACChecker:
     """
-    Validates remediation actions against an allowlist before any kubectl write.
-    Narrow scope: prefer pod-level operations; block cluster-wide destructive ops.
+    Simple safety layer.
+    Blocks dangerous actions unless explicitly allowed.
     """
 
-    ALLOWED_ACTIONS: frozenset[ActionType] = frozenset(
-        {
+    def is_allowed(self, plan: RemediationPlan) -> tuple[bool, str]:
+        # Block high blast radius
+        if plan.blast_radius == BlastRadius.HIGH:
+            return False, "High blast radius actions are blocked"
+
+        # Allow safe actions
+        if plan.action in (
             ActionType.RESTART_POD,
             ActionType.DELETE_POD,
-            ActionType.PATCH_RESOURCE_LIMITS,
-            ActionType.RECOMMEND_ONLY,
-            ActionType.ALERT_HUMAN,
             ActionType.NO_OP,
-        }
-    )
+            ActionType.RECOMMEND_ONLY,
+        ):
+            return True, "Allowed"
 
-    def is_allowed(self, plan: RemediationPlan) -> tuple[bool, str]:
-        if plan.action not in self.ALLOWED_ACTIONS:
-            return False, f"Action {plan.action} is not in the RBAC allowlist."
-        if plan.target.kind not in {"Pod", "Deployment"}:
-            return False, f"Target kind {plan.target.kind} is not permitted for automated writes."
-        return True, "ok"
+        # Allow patch with caution
+        if plan.action == ActionType.PATCH_RESOURCE_LIMITS:
+            return True, "Allowed (resource patch)"
+
+        # Alert is always safe
+        if plan.action == ActionType.ALERT_HUMAN:
+            return True, "Allowed (alert only)"
+
+        return False, f"Action {plan.action} not allowed"
