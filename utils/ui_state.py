@@ -106,6 +106,13 @@ def _pods_from_cluster(cluster: dict[str, Any] | None) -> list[dict[str, Any]]:
     return out
 
 
+def _clean_anomaly_label(s: str) -> str:
+    """Remove standalone 'cluster' from UI anomaly text; collapse whitespace."""
+    t = re.sub(r"\bcluster\b", "", s, flags=re.IGNORECASE)
+    t = " ".join(t.split()).strip()
+    return t if t else "—"
+
+
 def _audit_rows_for_ui(entries: list[Any]) -> list[dict[str, Any]]:
     # Demo table mapping (matches the screenshot you sent).
     # We prefer this mapping because older audit_log.json rows may not include
@@ -131,7 +138,8 @@ def _audit_rows_for_ui(entries: list[Any]) -> list[dict[str, Any]]:
         if not isinstance(e, dict):
             continue
 
-        resource = e.get("resource_ref") or e.get("resource") or "cluster"
+        raw_res = (e.get("resource_ref") or e.get("resource") or "").strip()
+        resource = raw_res if raw_res and raw_res.lower() != "cluster" else "—"
 
         # 1) Prefer the newer structured field if present
         anomaly = e.get("anomaly_type")
@@ -147,16 +155,31 @@ def _audit_rows_for_ui(entries: list[Any]) -> list[dict[str, Any]]:
         # 3) Final fallback
         if not anomaly_str:
             anomaly_str = str((e.get("phase") or "record")).upper()
+        if anomaly_str.strip().lower() == "cluster":
+            anomaly_str = "—"
 
         planned = e.get("planned_action")
         planned_s = str(planned) if planned else None
 
+        map_key = anomaly_str if anomaly_str != "—" else None
+
         # Action column:
         # - if we know the anomaly, show the screenshot's "Auto-Action" string
         # - else fall back to planned/plaint text
-        if anomaly_str in demo_auto_action_by_anomaly:
-            action_s = demo_auto_action_by_anomaly[anomaly_str]
-        elif planned_s and resource and resource != "cluster":
+        if map_key and map_key in demo_auto_action_by_anomaly:
+            action_s = demo_auto_action_by_anomaly[map_key]
+        elif map_key:
+            cleaned_key = _clean_anomaly_label(map_key)
+            if cleaned_key in demo_auto_action_by_anomaly:
+                action_s = demo_auto_action_by_anomaly[cleaned_key]
+            elif planned_s and resource != "—":
+                action_s = f"{planned_s} -> {resource}"
+            elif planned_s:
+                action_s = planned_s
+            else:
+                raw = e.get("action_taken")
+                action_s = (raw[:160] if isinstance(raw, str) else None) or "—"
+        elif planned_s and resource != "—":
             action_s = f"{planned_s} -> {resource}"
         elif planned_s:
             action_s = planned_s
@@ -164,11 +187,13 @@ def _audit_rows_for_ui(entries: list[Any]) -> list[dict[str, Any]]:
             raw = e.get("action_taken")
             action_s = (raw[:160] if isinstance(raw, str) else None) or "—"
 
+        anomaly_display = anomaly_str if anomaly_str == "—" else _clean_anomaly_label(anomaly_str)
+
         rows.append(
             {
                 "timestamp": e.get("timestamp"),
                 "resource": resource,
-                "anomaly_type": anomaly_str,
+                "anomaly_type": anomaly_display,
                 "action": action_s,
                 "explanation": e.get("summary") or "—",
                 "approved": e.get("approved"),

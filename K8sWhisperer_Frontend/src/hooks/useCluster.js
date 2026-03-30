@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { logIncidentToBlockchain } from '../integration';
 
 const defaultApiUrl =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
@@ -13,7 +12,6 @@ const useCluster = (apiUrl = defaultApiUrl) => {
   const [currentStage, setCurrentStage] = useState(0);
   const [remediation, setRemediation] = useState(null);
   const [auditLogs, setAuditLogs] = useState([]);
-  const lastLoggedRef = useRef(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -43,14 +41,6 @@ const useCluster = (apiUrl = defaultApiUrl) => {
       }
 
       setAuditLogs(data.audit_log || []);
-
-      if (stageIdx === 6 && data.audit_log?.length > 0) {
-        const latestEntry = data.audit_log[data.audit_log.length - 1];
-        if (lastLoggedRef.current !== latestEntry.timestamp) {
-          logIncidentToBlockchain(latestEntry);
-          lastLoggedRef.current = latestEntry.timestamp;
-        }
-      }
 
       setLoading(false);
     } catch (err) {

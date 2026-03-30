@@ -1,14 +1,10 @@
 import React from 'react';
-import { ClipboardList, CheckCircle2, ShieldAlert, ExternalLink, Clock } from 'lucide-react';
+import { ClipboardList, CheckCircle2, ShieldAlert, Clock } from 'lucide-react';
 
 /**
- * LogTable Component
- * Purpose: Fulfills Stage 07 (Explain & Log) and the 25-mark Web3 Bonus.
- * Displays the persistent history of all incidents, decisions, and actions.
+ * Audit trail table — timestamps, resource/anomaly, planned action, explanation.
  */
 const LogTable = ({ auditLogs }) => {
-  
-  // Helper to style the status badges in the audit trail
   const getActionStyle = (action) => {
     const a = String(action || '').toLowerCase();
     if (a.includes('restart') || a.includes('patch')) return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
@@ -18,7 +14,6 @@ const LogTable = ({ auditLogs }) => {
 
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
-      {/* Header Section */}
       <div className="p-4 border-b border-slate-800 bg-slate-800/30 flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <ClipboardList className="text-blue-400" size={20} />
@@ -29,64 +24,63 @@ const LogTable = ({ auditLogs }) => {
         </span>
       </div>
 
-      {/* Table Section */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse table-fixed">
+          <colgroup>
+            <col className="w-[11rem]" />
+            <col className="w-[22%]" />
+            <col className="w-[30%]" />
+            <col className="w-auto" />
+          </colgroup>
           <thead>
             <tr className="bg-slate-950/50 text-slate-500 uppercase text-[10px] tracking-wider">
-              <th className="px-6 py-3 font-black">Timestamp</th>
-              <th className="px-6 py-3 font-black">Resource / Anomaly</th>
-              <th className="px-6 py-3 font-black">Action Taken</th>
-              <th className="px-6 py-3 font-black">Plain-English Explanation</th>
-              <th className="px-6 py-3 font-black text-right">Web3 Verify</th>
+              <th className="px-4 sm:px-6 py-3 font-black">Timestamp</th>
+              <th className="px-4 sm:px-6 py-3 font-black">Resource / Anomaly</th>
+              <th className="px-4 sm:px-6 py-3 font-black">Action Taken</th>
+              <th className="px-4 sm:px-6 py-3 font-black">Explanation</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
             {auditLogs.length === 0 ? (
               <tr>
-                <td colSpan="5" className="px-6 py-10 text-center text-slate-600 italic text-sm">
-                  No incidents recorded in current observe cycle. Monitoring cluster...
+                <td colSpan={4} className="px-6 py-10 text-center text-slate-600 italic text-sm">
+                  No incidents recorded in this cycle. Monitoring workloads…
                 </td>
               </tr>
             ) : (
               auditLogs.map((log, index) => (
-                <tr key={index} className="hover:bg-slate-800/30 transition-colors group">
-                  {/* Timestamp */}
-                  <td className="px-6 py-4 whitespace-nowrap">
+                <tr key={index} className="hover:bg-slate-800/30 transition-colors group align-top">
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-slate-400 text-xs">
-                      <Clock size={12} className="mr-2 opacity-50" />
-                      {log.timestamp || new Date().toLocaleTimeString()}
+                      <Clock size={12} className="mr-2 shrink-0 opacity-50" />
+                      <span className="truncate">{log.timestamp || new Date().toLocaleTimeString()}</span>
                     </div>
                   </td>
 
-                  {/* Resource & Anomaly Type */}
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-bold text-slate-200">{log.resource}</div>
-                    <div className="text-[10px] text-red-400 font-mono font-bold uppercase">
+                  <td className="px-4 sm:px-6 py-4 min-w-0">
+                    <div className="text-sm font-bold text-slate-200 truncate" title={log.resource}>
+                      {log.resource}
+                    </div>
+                    <div
+                      className="text-base sm:text-lg text-red-400 font-mono font-extrabold tracking-tight mt-1.5 break-words"
+                      title={log.anomaly_type}
+                    >
                       {log.anomaly_type}
                     </div>
                   </td>
 
-                  {/* Action Badge */}
-                  <td className="px-6 py-4">
-                    <span className={`text-[10px] px-2 py-1 rounded-md border font-bold uppercase ${getActionStyle(log.action)}`}>
+                  <td className="px-4 sm:px-6 py-4 min-w-0">
+                    <span
+                      className={`text-sm sm:text-base px-3 py-2 rounded-lg border font-semibold leading-snug text-left block w-full break-words ${getActionStyle(log.action)}`}
+                    >
                       {log.action}
                     </span>
                   </td>
 
-                  {/* Plain English Diagnosis */}
-                  <td className="px-6 py-4 max-w-xs">
-                    <p className="text-xs text-slate-400 leading-relaxed group-hover:text-slate-200 transition-colors">
+                  <td className="px-4 sm:px-6 py-4 min-w-0">
+                    <p className="text-xs sm:text-sm text-slate-400 leading-relaxed group-hover:text-slate-200 transition-colors break-words">
                       {log.explanation}
                     </p>
-                  </td>
-
-                  {/* Web3 / Stellar Bonus Button */}
-                  <td className="px-6 py-4 text-right">
-                    <button className="inline-flex items-center space-x-1 px-3 py-1 bg-purple-900/30 border border-purple-500/40 rounded text-purple-300 text-[10px] font-bold hover:bg-purple-500 hover:text-white transition-all">
-                      <ExternalLink size={10} />
-                      <span>Stellar Ledger</span>
-                    </button>
                   </td>
                 </tr>
               ))
@@ -95,14 +89,14 @@ const LogTable = ({ auditLogs }) => {
         </table>
       </div>
 
-      {/* Footer / Summary Info */}
       <div className="p-3 bg-slate-950/20 border-t border-slate-800 flex items-center justify-between">
         <div className="flex items-center text-[10px] text-slate-500 space-x-4">
           <span className="flex items-center">
-            <CheckCircle2 size={12} className="mr-1 text-green-500" /> Cycles logged: {auditLogs.length}
+            <CheckCircle2 size={12} className="mr-1 text-green-500 shrink-0" /> Cycles logged: {auditLogs.length}
           </span>
           <span className="flex items-center">
-            <ShieldAlert size={12} className="mr-1 text-amber-500" /> HITL approved: {auditLogs.filter((l) => l.approved === true).length}
+            <ShieldAlert size={12} className="mr-1 text-amber-500 shrink-0" /> HITL approved:{' '}
+            {auditLogs.filter((l) => l.approved === true).length}
           </span>
         </div>
       </div>

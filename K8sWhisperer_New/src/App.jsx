@@ -67,7 +67,7 @@ export default function App() {
 
         {/* AUDIT TRAIL / MAIN VIEWPORT */}
         <section className="flex-1 p-10 overflow-y-auto relative">
-          <div className="max-w-6xl mx-auto space-y-8">
+          <div className="max-w-[90rem] mx-auto space-y-8 px-0">
             {loading && (
               <p className="text-center text-slate-500 text-sm font-mono">Connecting to K8sWhisperer API…</p>
             )}

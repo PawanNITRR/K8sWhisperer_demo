@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { logIncidentToBlockchain } from '../integration.js';
 
 // Dev: empty string → same-origin requests hit Vite proxy (vite.config.js).
 // Prod / preview: full URL unless VITE_API_URL is set at build time.
@@ -14,7 +13,6 @@ const useCluster = (apiUrl = defaultApiUrl) => {
   const [currentStage, setCurrentStage] = useState(0); 
   const [remediation, setRemediation] = useState(null);
   const [auditLogs, setAuditLogs] = useState([]);
-  const lastLoggedRef = useRef(null); // Prevents duplicate blockchain logs
 
   const fetchData = useCallback(async () => {
     try {
@@ -44,16 +42,6 @@ const useCluster = (apiUrl = defaultApiUrl) => {
       }
 
       setAuditLogs(data.audit_log || []);
-
-      // ✨ WEB3 BONUS LOGIC [cite: 57, 114]
-      // Automatically sync to Stellar when we hit the Explain stage (Stage 07)
-      if (stageIdx === 6 && data.audit_log?.length > 0) {
-        const latestEntry = data.audit_log[data.audit_log.length - 1];
-        if (lastLoggedRef.current !== latestEntry.timestamp) {
-          logIncidentToBlockchain(latestEntry); // Immutable audit trail 
-          lastLoggedRef.current = latestEntry.timestamp;
-        }
-      }
 
       setLoading(false);
     } catch (err) {

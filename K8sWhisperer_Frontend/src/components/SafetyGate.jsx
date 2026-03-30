@@ -97,7 +97,7 @@ const SafetyGate = ({ remediation, onApprove, onReject }) => {
         </div>
 
         <p className="text-[10px] text-slate-500 mt-6 text-center italic">
-          Decision will be recorded in the persistent audit log and synced to the Stellar ledger[cite: 30, 46].
+          Decision will be recorded in the persistent audit log.
         </p>
       </div>
     </div>
