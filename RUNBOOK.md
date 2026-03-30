@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Python 3.10+
-- **Either** a real cluster: `kubectl` on `PATH` and a working kubeconfig (e.g. minikube), **or** set **`MOCK_CLUSTER=1`** in `.env` to run the full pipeline against an in-memory fixture (no kube-apiserver, no `kubectl` binary).
+- **Either** a real cluster: `kubectl` on `PATH` and a working kubeconfig (e.g. minikube), **or** set **`MOCK_CLUSTER=1`** in `.env` to run the full pipeline against an in-memory fixture (no kube-apiserver, no `kubectl` binary). With mock mode, **each 30s cycle** presents the next of **eight** scenarios (CrashLoop, OOM, Pending, Evicted, ImagePull, NodeNotReady, DeploymentStalled, CPU throttle); after each full graph run the index advances automatically.
 
 ### Windows: `kubectl` not found
 
@@ -29,6 +29,8 @@ python -m pip install -U pip
 python -m pip install -e ".[dev]"
 ```
 
+Run each line separately. If you paste `install ... ".[dev]"` and `python main.py` on one line, pip may try to install a package literally named `python` and fail.
+
 If editable install fails on older pip, use:
 
 ```bash
@@ -43,6 +45,8 @@ Copy `.env.example` to `.env` and set at least:
 
 - `LLM_PROVIDER=openai` and `OPENAI_API_KEY=...` (or `anthropic` + `ANTHROPIC_API_KEY`)
 - For demos without API spend: `LLM_PROVIDER=mock` (deterministic stub responses)
+- With a real provider (`gemini`, `openai`, `anthropic`), the app retries transient errors (429, overload, short 5xx) with backoff and uses the provider’s `max_retries`. **Daily free-tier caps** (e.g. Gemini `GenerateRequestsPerDay`) are not fixable by retrying; raise limits or switch model/key.
+- **`MOCK_CLUSTER=1`:** Detection uses **rules + mock Prometheus only** (the Gemini/OpenAI classifier is skipped) so each 30s cycle shows anomalies immediately. Diagnose / explain / alert use lightweight mock templates too, so you can keep `LLM_PROVIDER=gemini` for future real-cluster use without blocking the demo loop.
 
 ## Run the agent loop + API
 

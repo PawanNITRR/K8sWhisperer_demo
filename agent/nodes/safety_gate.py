@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from schemas.constants import DESTRUCTIVE_ACTIONS, HITL_ONLY_ANOMALIES, SAFETY_CONFIDENCE_THRESHOLD
-from schemas.enums import AnomalyType, BlastRadius, Severity
+from schemas.enums import ActionType, AnomalyType, BlastRadius, Severity
 from schemas.models import RemediationPlan
+from config import get_settings
 
 
 def should_auto_execute(plan: RemediationPlan, anomaly_type: AnomalyType, anomaly_severity: Severity) -> bool:
@@ -51,7 +52,20 @@ def safety_gate_node(state: dict) -> dict:
         return {"should_auto_execute": False}
 
     plan = RemediationPlan.model_validate(plan_raw)
+    settings = get_settings()
+    if settings.mock_cluster:
+        _MOCK_FORBIDDEN = frozenset(
+            {
+                ActionType.DELETE_NAMESPACE,
+                ActionType.NODE_DRAIN,
+                ActionType.ROLLBACK_OR_FORCE_ROLLOUT,
+            }
+        )
+        if plan.action in _MOCK_FORBIDDEN:
+            return {"should_auto_execute": False}
+        return {"should_auto_execute": True}
+
     at = AnomalyType(primary["type"])
-    severity = Severity(primary.get("severity", "LOW"))
+    severity = Severity(primary.get("severity", "low"))
     auto = should_auto_execute(plan, at, severity)
     return {"should_auto_execute": auto}

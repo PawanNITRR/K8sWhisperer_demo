@@ -11,25 +11,35 @@ class RBACChecker:
     """
 
     def is_allowed(self, plan: RemediationPlan) -> tuple[bool, str]:
-        # Block high blast radius
-        if plan.blast_radius == BlastRadius.HIGH:
-            return False, "High blast radius actions are blocked"
-
-        # Allow safe actions
+        # No cluster writes — always allow through executor (executor is a no-op for these)
         if plan.action in (
-            ActionType.RESTART_POD,
-            ActionType.DELETE_POD,
+            ActionType.ALERT_HUMAN,
             ActionType.NO_OP,
             ActionType.RECOMMEND_ONLY,
         ):
+            return True, "Allowed (no cluster write)"
+
+        if plan.blast_radius == BlastRadius.HIGH:
+            return False, "High blast radius actions are blocked"
+
+        if plan.action in (
+            ActionType.RESTART_POD,
+            ActionType.DELETE_POD,
+        ):
             return True, "Allowed"
 
-        # Allow patch with caution
         if plan.action == ActionType.PATCH_RESOURCE_LIMITS:
             return True, "Allowed (resource patch)"
 
-        # Alert is always safe
-        if plan.action == ActionType.ALERT_HUMAN:
-            return True, "Allowed (alert only)"
-
         return False, f"Action {plan.action} not allowed"
+
+
+# ---------- SINGLETON ----------
+_rbac_checker: RBACChecker | None = None
+
+
+def get_rbac_checker() -> RBACChecker:
+    global _rbac_checker
+    if _rbac_checker is None:
+        _rbac_checker = RBACChecker()
+    return _rbac_checker

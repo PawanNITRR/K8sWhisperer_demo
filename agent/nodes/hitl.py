@@ -8,7 +8,7 @@ from langgraph.types import interrupt
 
 from agent.state import AgentState
 from config import get_settings
-from mcp_servers.slack_mcp import SlackMCP
+from mcp_servers.slack_mcp import get_slack_client
 from utils.structured_logger import get_logger
 
 log = get_logger(__name__)
@@ -63,7 +63,7 @@ def hitl_node(state: AgentState, config: RunnableConfig) -> dict[str, Any]:
     plan = state.get("plan") or {}
     diagnosis = state.get("diagnosis") or ""
 
-    slack = SlackMCP()
+    slack = get_slack_client()
     if settings.slack_channel_id and settings.slack_bot_token:
         try:
             slack.post_hitl_message(

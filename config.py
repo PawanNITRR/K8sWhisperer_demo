@@ -1,11 +1,14 @@
+import os
 from functools import lru_cache
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_ENV_FILE = os.path.join(os.path.dirname(__file__), ".env")
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(env_file=_ENV_FILE, env_file_encoding="utf-8", extra="ignore")
 
     # LLM: openai | anthropic | gemini | mock (no API calls; for CI/local smoke)
     llm_provider: str = Field(

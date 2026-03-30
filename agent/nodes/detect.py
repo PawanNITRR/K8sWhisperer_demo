@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from schemas.enums import AnomalyType, Severity
 from schemas.models import Anomaly
 from agent.llm_factory import get_chat_model
+from utils.llm_invoke import invoke_with_retry
 from agent.prompts_util import load_prompt
 from agent.rollout_guard import pod_has_rollout_in_progress
 from agent.rule_detector import (
@@ -18,6 +19,7 @@ from agent.rule_detector import (
 )
 from agent.rule_engine import detect_cpu_throttling
 from agent.state import AgentState
+from config import get_settings
 from mcp_servers.kubectl_mcp import get_kubectl_client
 from utils.structured_logger import get_logger
 
@@ -83,26 +85,38 @@ def detect_node(state: AgentState) -> dict[str, Any]:
         anomaly = Anomaly.model_validate(anomaly_dict)
         rule_based.append(anomaly)
 
+    log.info(
+        "Detect: rule-based count=%d types=%s",
+        len(rule_based),
+        [a.type.value for a in rule_based],
+    )
+
+    settings = get_settings()
     llm_anomalies: list[Anomaly] = []
-    try:
-        model = get_chat_model()
-        structured = model.with_structured_output(DetectLLMResult)
-        sys = load_prompt("detect_system.txt")
-        payload = {
-            "events": events[-120:],
-            "pods": pods[:80],
-            "nodes": nodes[:40],
-        }
-        msg = HumanMessage(content=json.dumps(payload, default=str)[:120_000])
-        res: DetectLLMResult | None = structured.invoke(
-            [SystemMessage(content=sys), msg],
-        )
-        if res is None:
-            llm_anomalies = []
-        else:
-            llm_anomalies = list(res.anomalies or [])
-    except Exception as e:
-        log.warning("LLM detect failed, using rules only: %s", e)
+    if settings.mock_cluster:
+        log.info("Detect: skipping LLM classifier (MOCK_CLUSTER=1); rules + Prometheus drive detection.")
+    else:
+        try:
+            model = get_chat_model()
+            structured = model.with_structured_output(DetectLLMResult)
+            sys = load_prompt("detect_system.txt")
+            payload = {
+                "events": events[-120:],
+                "pods": pods[:80],
+                "nodes": nodes[:40],
+            }
+            msg = HumanMessage(content=json.dumps(payload, default=str)[:120_000])
+            res = invoke_with_retry(
+                lambda: structured.invoke([SystemMessage(content=sys), msg]),
+                log=log,
+                operation="detect",
+            )
+            if res is None:
+                llm_anomalies = []
+            else:
+                llm_anomalies = list(res.anomalies or [])
+        except Exception as e:
+            log.info("LLM detect unavailable, using rules only: %s", e)
 
     merged = _dedupe(rule_based + llm_anomalies)
 
@@ -123,7 +137,13 @@ def detect_node(state: AgentState) -> dict[str, Any]:
         filtered.append(a)
 
     primary = pick_primary(filtered)
-    log.info("Detect: %d anomalies (primary=%s)", len(filtered), primary.type if primary else None)
+    log.info(
+        "Detect: %d after filters (primary=%s)",
+        len(filtered),
+        f"{primary.type.value} on {primary.affected_resource.kind}/{primary.affected_resource.namespace}/{primary.affected_resource.name}"
+        if primary
+        else None,
+    )
 
     return {
         "anomalies": [a.model_dump(mode="json") for a in filtered],

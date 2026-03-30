@@ -7,8 +7,10 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from schemas.models import AffectedResource, DiagnosisOutcome
 from agent.llm_factory import get_chat_model
+from utils.llm_invoke import invoke_with_retry
 from agent.prompts_util import load_prompt
 from agent.state import AgentState
+from config import get_settings
 from mcp_servers.kubectl_mcp import get_kubectl_client
 from schemas.constants import LOG_MAX_CHARS, LOG_TAIL_LINES
 from utils.log_chunker import prepare_logs_for_llm
@@ -39,12 +41,27 @@ def diagnose_node(state: AgentState) -> dict[str, Any]:
     except Exception as e:
         describe_txt = f"(describe failed: {e})"
 
+    settings = get_settings()
     if ar.kind == "Pod" and logs_txt:
         logs_txt = prepare_logs_for_llm(logs_txt, tail_line_count=LOG_TAIL_LINES, max_chars=LOG_MAX_CHARS)
-        # Convert messy logs to plain English summary
-        logs_summary = summarize_logs_plain_english(logs_txt)
+        if settings.mock_cluster:
+            logs_summary = "Mock pod log excerpt (LLM summarizer skipped when MOCK_CLUSTER=1)."
+        else:
+            logs_summary = summarize_logs_plain_english(logs_txt)
     else:
         logs_summary = "No pod logs available for analysis."
+
+    if settings.mock_cluster:
+        at = primary.get("type", "Unknown")
+        sev = primary.get("severity", "")
+        log.info("Diagnose: mock template for %s severity=%s", at, sev)
+        return {
+            "diagnosis": (
+                f"Mock diagnosis — {at} (severity {sev}): matches the spec trigger; "
+                "synthetic describe/logs below. In production, Gemini would expand this."
+            ),
+            "evidence_list": [describe_txt[:600], (logs_summary or "")[:600]],
+        }
 
     model = get_chat_model()
     structured = model.with_structured_output(DiagnosisOutcome)
@@ -56,9 +73,13 @@ def diagnose_node(state: AgentState) -> dict[str, Any]:
     }
     msg = HumanMessage(content=json.dumps(payload, default=str))
     try:
-        out: DiagnosisOutcome | None = structured.invoke([SystemMessage(content=sys), msg])
+        out = invoke_with_retry(
+            lambda: structured.invoke([SystemMessage(content=sys), msg]),
+            log=log,
+            operation="diagnose",
+        )
     except Exception as e:
-        log.warning("diagnose LLM failed: %s", e)
+        log.info("diagnose LLM unavailable: %s", e)
         out = DiagnosisOutcome(root_cause="Diagnosis unavailable (LLM error).", evidence_list=[str(e)])
     if out is None:
         out = DiagnosisOutcome(root_cause="Diagnosis unavailable (empty LLM response).", evidence_list=[])

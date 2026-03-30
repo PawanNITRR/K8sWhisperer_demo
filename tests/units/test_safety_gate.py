@@ -1,4 +1,4 @@
-from schemas.enums import ActionType, AnomalyType, BlastRadius
+from schemas.enums import ActionType, AnomalyType, BlastRadius, Severity
 from schemas.models import AffectedResource, RemediationPlan
 from agent.nodes.safety_gate import should_auto_execute
 
@@ -10,7 +10,7 @@ def test_auto_execute_allowed_for_safe_restart():
         confidence=0.9,
         blast_radius=BlastRadius.LOW,
     )
-    assert should_auto_execute(plan, AnomalyType.CRASH_LOOP_BACK_OFF) is True
+    assert should_auto_execute(plan, AnomalyType.CRASH_LOOP_BACK_OFF, Severity.LOW) is True
 
 
 def test_node_not_ready_always_hitl():
@@ -20,7 +20,7 @@ def test_node_not_ready_always_hitl():
         confidence=0.99,
         blast_radius=BlastRadius.LOW,
     )
-    assert should_auto_execute(plan, AnomalyType.NODE_NOT_READY) is False
+    assert should_auto_execute(plan, AnomalyType.NODE_NOT_READY, Severity.LOW) is False
 
 
 def test_destructive_action_blocked():
@@ -30,7 +30,7 @@ def test_destructive_action_blocked():
         confidence=0.99,
         blast_radius=BlastRadius.LOW,
     )
-    assert should_auto_execute(plan, AnomalyType.IMAGE_PULL_BACK_OFF) is False
+    assert should_auto_execute(plan, AnomalyType.IMAGE_PULL_BACK_OFF, Severity.LOW) is False
 
 
 def test_low_confidence_blocked():
@@ -40,7 +40,7 @@ def test_low_confidence_blocked():
         confidence=0.5,
         blast_radius=BlastRadius.LOW,
     )
-    assert should_auto_execute(plan, AnomalyType.CRASH_LOOP_BACK_OFF) is False
+    assert should_auto_execute(plan, AnomalyType.CRASH_LOOP_BACK_OFF, Severity.LOW) is False
 
 
 def test_high_blast_radius_blocked():
@@ -50,4 +50,4 @@ def test_high_blast_radius_blocked():
         confidence=0.99,
         blast_radius=BlastRadius.HIGH,
     )
-    assert should_auto_execute(plan, AnomalyType.CRASH_LOOP_BACK_OFF) is False
+    assert should_auto_execute(plan, AnomalyType.CRASH_LOOP_BACK_OFF, Severity.LOW) is False

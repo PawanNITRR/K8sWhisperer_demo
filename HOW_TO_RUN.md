@@ -70,7 +70,6 @@ STATE_STORE_PATH=data/state_store.json
 ```
 
 **Important:** Replace `your-gemini-api-key-here` with your actual Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey).
-```
 
 ### Alternative: Set Environment Variables Directly
 ```bash
@@ -106,7 +105,8 @@ from mcp_servers.prometheus_mcp import PrometheusMCP
 p = PrometheusMCP()
 print('Prometheus MCP Health:', p.health())
 "
-```
+# Note: Will show connection error if Prometheus is not running
+# This is normal - Prometheus is optional for CPU throttling detection
 
 ### Slack MCP Test
 ```bash
@@ -296,10 +296,52 @@ pip install pydantic pydantic-settings langchain langchain-core langgraph reques
 ```
 
 ### Port Already in Use
-```bash
+WinError 10048 / “only one usage of each socket address” means something else is already listening on that port (often another `python main.py` or a dev server).
+
+**Windows (PowerShell):** see what owns the port, then stop it or pick another:
+```powershell
+netstat -ano | findstr :8080
+```
+The last column is the PID (for example `11612`). **Do not use angle brackets** in PowerShell — it treats `<` as redirection. Run `taskkill` with that number only:
+```powershell
+taskkill /PID 11612 /F
+```
+(Replace `11612` with your actual PID.)
+
+Or use a different port without killing anything — in `.env` set `API_PORT=8081` (or `8001`), then run `python main.py` again.
+
+### pip: `No matching distribution found for python`
+That usually means two commands were typed on **one line** without a separator, for example:
+`python -m pip install -e ".[dev]"python main.py`
+
+PowerShell then passes `python` as the next package name to pip. Fix: run **two** commands (press Enter between them), or use a semicolon:
+```powershell
+python -m pip install -e ".[dev]"
+python main.py
+```
+
+**cmd.exe:**
+```bat
 set API_PORT=8001
 python main.py
 ```
+
+### Windows: “running scripts is disabled” (venv Activate.ps1)
+PowerShell blocks `Activate.ps1` when the execution policy is restrictive. Pick one:
+
+- **Current session only (safest):**  
+  `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass`  
+  then run `.\.venv\Scripts\Activate.ps1`
+
+- **No PowerShell scripts:** use the batch activator from cmd or PowerShell:  
+  `.\.venv\Scripts\activate.bat`
+
+- **User scope (persistent):**  
+  `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`  
+  (run PowerShell as Administrator is not required for CurrentUser.)
+
+### Prometheus “connection refused” / port 9090
+Optional. If you do not run Prometheus on `localhost:9090`, Observe logs a warning and continues without CPU-throttle metrics. To silence it, leave `PROMETHEUS_BASE_URL` unset in `.env` or point it at a real Prometheus URL when you have one.
 
 ### No Anomalies Detected
 - Ensure MOCK_CLUSTER=1 is set
@@ -308,6 +350,7 @@ python main.py
 
 ### LLM Errors
 - Use LLM_PROVIDER=mock for testing
+- **Gemini 429 / RESOURCE_EXHAUSTED / free-tier quota:** The API will throttle or reject calls when daily or per-minute limits are hit. Set `LLM_PROVIDER=mock` to run offline, wait for the retry window, upgrade billing, or switch provider. The detect node falls back to rule-based detection when the LLM call fails.
 - For Gemini: Get API key from [Google AI Studio](https://makersuite.google.com/app/apikey) and set GEMINI_API_KEY
 - For OpenAI: Get API key from [OpenAI Platform](https://platform.openai.com/api-keys)
 - For Anthropic: Get API key from [Anthropic Console](https://console.anthropic.com/)

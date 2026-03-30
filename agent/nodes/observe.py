@@ -4,8 +4,9 @@ import uuid
 from typing import Any
 
 from schemas.models import ClusterSnapshot
+from config import get_settings
 from mcp_servers.kubectl_mcp import get_kubectl_client
-from mcp_servers.prometheus_mcp import PrometheusMCP
+from mcp_servers.prometheus_mcp import get_prometheus_client
 from utils.structured_logger import get_logger
 
 from agent.state import AgentState
@@ -27,14 +28,16 @@ def observe_node(state: AgentState) -> dict[str, Any]:
     deps = k.get_deployments_all_namespaces()
 
     prom: dict[str, Any] = {}
-    pm = PrometheusMCP()
-    if pm.health().get("ok"):
-        try:
-            prom["cpu_throttle_sample"] = pm.query(
-                "sum(rate(container_cpu_cfs_throttled_seconds_total[5m])) by (namespace,pod)"
-            )
-        except Exception as e:
-            prom["error"] = str(e)
+    settings = get_settings()
+    if settings.prometheus_base_url or settings.mock_cluster:
+        pm = get_prometheus_client()
+        if pm.health().get("ok"):
+            try:
+                prom["cpu_throttle_sample"] = pm.query(
+                    "sum(rate(container_cpu_cfs_throttled_seconds_total[5m])) by (namespace,pod)"
+                )
+            except Exception as e:
+                prom["error"] = str(e)
 
     snap = ClusterSnapshot(
         events=events,

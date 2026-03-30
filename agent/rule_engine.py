@@ -95,7 +95,7 @@ def generate_plan_for_anomaly(anomaly: dict[str, Any]) -> RemediationPlan | None
             target=affected_resource,
             parameters={"reason": "Node not ready - investigate hardware/network issues, never auto-drain"},
             confidence=0.95,
-            blast_radius=BlastRadius.CRITICAL,
+            blast_radius=BlastRadius.HIGH,
             rationale="Node failure - critical infrastructure issue requiring immediate human attention."
         )
 
@@ -128,7 +128,7 @@ def detect_cpu_throttling(metrics: dict[str, Any]) -> list[dict[str, Any]]:
 
             anomaly = {
                 "type": AnomalyType.CPU_THROTTLING.value,
-                "severity": "MEDIUM",
+                "severity": "medium",
                 "affected_resource": {
                     "kind": "Pod",
                     "namespace": namespace,

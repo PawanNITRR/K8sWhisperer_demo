@@ -8,8 +8,9 @@ from schemas.constants import VERIFY_MAX_WAIT_SEC, VERIFY_POLL_BASE_SEC
 from schemas.enums import ActionType
 from schemas.models import RemediationPlan
 from agent.state import AgentState
+from config import get_settings
 from mcp_servers.kubectl_mcp import KubectlMCP, get_kubectl_client
-from mcp_servers.rbac_checker import RBACChecker
+from mcp_servers.rbac_checker import get_rbac_checker
 from utils.structured_logger import get_logger
 
 log = get_logger(__name__)
@@ -113,14 +114,19 @@ def execute_node(state: AgentState) -> dict[str, Any]:
         return {"result": "No plan to execute."}
 
     plan = RemediationPlan.model_validate(plan_raw)
-    rbac = RBACChecker()
+    rbac = get_rbac_checker()
     ok, msg = rbac.is_allowed(plan)
+
     if not ok:
         return {"result": f"Blocked by RBAC checker: {msg}"}
 
     k = get_kubectl_client()
     start = time.time()
-    time.sleep(min(30, VERIFY_MAX_WAIT_SEC))
+    settings = get_settings()
+    if settings.mock_cluster:
+        time.sleep(0.5)
+    else:
+        time.sleep(min(30, VERIFY_MAX_WAIT_SEC))
 
     try:
         if plan.action == ActionType.RESTART_POD or plan.action == ActionType.DELETE_POD:

@@ -9,6 +9,7 @@ import uvicorn
 from agent.graph import build_graph
 from config import get_settings
 from schemas.constants import POLL_INTERVAL_SEC
+from utils.mock_state import advance_anomaly, get_mock_scenario_label
 from utils.structured_logger import get_logger
 from webhook.server import app as api_app
 
@@ -39,10 +40,20 @@ def main() -> None:
 
     while True:
         thread_id = str(uuid.uuid4())
+        if settings.mock_cluster:
+            log.info("Mock scenario (this cycle): %s", get_mock_scenario_label())
         try:
             graph.invoke({}, config={"configurable": {"thread_id": thread_id}})
         except Exception:
             log.exception("Graph cycle failed")
+        else:
+            if settings.mock_cluster:
+                advance_anomaly()
+                log.info(
+                    "Mock: next scenario in %ss -> %s",
+                    POLL_INTERVAL_SEC,
+                    get_mock_scenario_label(),
+                )
         time.sleep(POLL_INTERVAL_SEC)
 
 

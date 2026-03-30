@@ -5,6 +5,11 @@ Separated to avoid circular imports.
 
 from typing import Any
 
+from utils.llm_invoke import invoke_with_retry
+from utils.structured_logger import get_logger
+
+_log = get_logger(__name__)
+
 
 def summarize_logs_plain_english(raw_logs: str) -> str:
     """
@@ -70,7 +75,11 @@ If logs are normal/healthy, say so clearly."""
             HumanMessage(content=summary_input)
         ]
 
-        response = model.invoke(messages)
+        response = invoke_with_retry(
+            lambda: model.invoke(messages),
+            log=_log,
+            operation="log_summarize",
+        )
         summary = str(response.content).strip()
 
         # Ensure it's not too long

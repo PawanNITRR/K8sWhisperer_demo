@@ -6,8 +6,10 @@ from typing import Any
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from agent.rule_engine import generate_plan_for_anomaly
+from schemas.enums import ActionType, AnomalyType, BlastRadius
 from schemas.models import RemediationPlan
 from agent.llm_factory import get_chat_model
+from utils.llm_invoke import invoke_with_retry
 from agent.prompts_util import load_prompt
 from agent.state import AgentState
 from utils.structured_logger import get_logger
@@ -91,9 +93,13 @@ def plan_node(state: AgentState) -> dict[str, Any]:
         content=json.dumps({"anomaly": primary, "diagnosis": diagnosis, "evidence": state.get("evidence_list") or []})
     )
     try:
-        plan: RemediationPlan | None = structured.invoke([SystemMessage(content=sys), msg])
+        plan = invoke_with_retry(
+            lambda: structured.invoke([SystemMessage(content=sys), msg]),
+            log=log,
+            operation="plan",
+        )
     except Exception as e:
-        log.warning("plan LLM failed, using fallback: %s", e)
+        log.info("plan LLM unavailable, using fallback: %s", e)
         plan = _fallback_plan(primary, diagnosis)
     if plan is None:
         plan = _fallback_plan(primary, diagnosis)
