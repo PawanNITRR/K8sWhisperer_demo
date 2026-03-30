@@ -44,7 +44,13 @@ class LogEntry(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     phase: str
     summary: str
+    # Short label for UI (e.g. restart_pod @ Pod/default/foo); optional raw kubectl in execution_detail
     action_taken: str | None = None
+    anomaly_type: str | None = None
+    resource_ref: str | None = None
+    planned_action: str | None = None
+    execution_detail: str | None = None
+    hitl_involved: bool | None = None
 
 
 class AlertDecision(BaseModel):

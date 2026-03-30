@@ -32,6 +32,15 @@ def _slack_blocks(thread_id: str, plan: dict, diagnosis: str) -> list[dict[str, 
             },
         },
         {
+            "type": "context",
+            "elements": [
+                {
+                    "type": "mrkdwn",
+                    "text": "👇 *Approve* or *Reject* this remediation. (Requires Slack app *Interactivity* → Request URL → `https://<your-host>/slack/interactions`.)",
+                }
+            ],
+        },
+        {
             "type": "actions",
             "block_id": "hitl_actions",
             "elements": [
@@ -69,9 +78,10 @@ def hitl_node(state: AgentState, config: RunnableConfig) -> dict[str, Any]:
             slack.post_hitl_message(
                 channel=settings.slack_channel_id,
                 thread_ts=None,
-                title="K8sWhisperer HITL",
+                title="K8sWhisperer HITL — Approve or Reject",
                 blocks=_slack_blocks(thread_id, plan, diagnosis),
             )
+            log.info("Slack HITL message sent with Approve/Reject buttons (thread_id=%s).", thread_id[:8])
         except Exception as e:
             log.warning("Slack post failed (continuing to interrupt): %s", e)
 

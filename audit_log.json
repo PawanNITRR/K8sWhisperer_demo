@@ -6484,5 +6484,62 @@
     "phase": "explain",
     "summary": "[MOCK_CLUSTER] Anomaly OOMKilled (sev=high). Diagnosis: Mock diagnosis \u2014 OOMKilled (severity high): matches the spec trigger; synthetic describe/logs below. In production, Gemini would expand this.\u2026 Planned action: patch_resource_limits. Execution: Patched deployment/demo-deployment memory (+50%) and restarted rollout.\nMock patch applied\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)",
     "action_taken": "Patched deployment/demo-deployment memory (+50%) and restarted rollout.\nMock patch applied\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)"
+  },
+  {
+    "timestamp": "2026-03-30T02:52:11.462547Z",
+    "phase": "explain",
+    "summary": "[MOCK_CLUSTER] Anomaly CrashLoopBackOff (sev=high). Diagnosis: Mock diagnosis \u2014 CrashLoopBackOff (severity high): matches the spec trigger; synthetic describe/logs below. In production, Gemini would expand this.\u2026 Planned action: restart_pod. Execution: kubectl delete pod output:\nMock deleted pod default/crashloop-pod\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)",
+    "action_taken": "kubectl delete pod output:\nMock deleted pod default/crashloop-pod\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)"
+  },
+  {
+    "timestamp": "2026-03-30T02:52:42.029652Z",
+    "phase": "explain",
+    "summary": "[MOCK_CLUSTER] Anomaly OOMKilled (sev=high). Diagnosis: Mock diagnosis \u2014 OOMKilled (severity high): matches the spec trigger; synthetic describe/logs below. In production, Gemini would expand this.\u2026 Planned action: patch_resource_limits. Execution: Patched deployment/demo-deployment memory (+50%) and restarted rollout.\nMock patch applied\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)",
+    "action_taken": "Patched deployment/demo-deployment memory (+50%) and restarted rollout.\nMock patch applied\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)"
+  },
+  {
+    "timestamp": "2026-03-30T02:53:12.566268Z",
+    "phase": "explain",
+    "summary": "[MOCK_CLUSTER] Anomaly PendingPod (sev=medium). Diagnosis: Mock diagnosis \u2014 PendingPod (severity medium): matches the spec trigger; synthetic describe/logs below. In production, Gemini would expand this.\u2026 Planned action: alert_human. Execution: No kubectl write performed (alert_human).",
+    "action_taken": "No kubectl write performed (alert_human)."
+  },
+  {
+    "timestamp": "2026-03-30T02:53:43.093671Z",
+    "phase": "explain",
+    "summary": "[MOCK_CLUSTER] Anomaly EvictedPod (sev=low). Diagnosis: Mock diagnosis \u2014 EvictedPod (severity low): matches the spec trigger; synthetic describe/logs below. In production, Gemini would expand this.\u2026 Planned action: delete_pod. Execution: kubectl delete pod output:\nMock deleted pod default/evicted-pod\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)",
+    "action_taken": "kubectl delete pod output:\nMock deleted pod default/evicted-pod\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)"
+  },
+  {
+    "timestamp": "2026-03-30T02:59:51.393946Z",
+    "phase": "explain",
+    "summary": "[MOCK_CLUSTER] Anomaly CrashLoopBackOff (sev=high). Diagnosis: Mock diagnosis \u2014 CrashLoopBackOff (severity high): matches the spec trigger; synthetic describe/logs below. In production, Gemini would expand this.\u2026 Planned action: restart_pod. Execution: kubectl delete pod output:\nMock deleted pod default/crashloop-pod\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)",
+    "action_taken": "restart_pod @ Pod/default/crashloop-pod",
+    "anomaly_type": "CrashLoopBackOff",
+    "resource_ref": "Pod/default/crashloop-pod",
+    "planned_action": "restart_pod",
+    "execution_detail": "kubectl delete pod output:\nMock deleted pod default/crashloop-pod\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)",
+    "hitl_involved": false
+  },
+  {
+    "timestamp": "2026-03-30T03:00:21.946946Z",
+    "phase": "explain",
+    "summary": "[MOCK_CLUSTER] Anomaly OOMKilled (sev=high). Diagnosis: Mock diagnosis \u2014 OOMKilled (severity high): matches the spec trigger; synthetic describe/logs below. In production, Gemini would expand this.\u2026 Planned action: patch_resource_limits. Execution: Patched deployment/demo-deployment memory (+50%) and restarted rollout.\nMock patch applied\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)",
+    "action_taken": "patch_resource_limits @ Pod/default/oom-pod",
+    "anomaly_type": "OOMKilled",
+    "resource_ref": "Pod/default/oom-pod",
+    "planned_action": "patch_resource_limits",
+    "execution_detail": "Patched deployment/demo-deployment memory (+50%) and restarted rollout.\nMock patch applied\n\nVerified deployment/demo-deployment: deployment 'demo-deployment' successfully rolled out (mock)",
+    "hitl_involved": false
+  },
+  {
+    "timestamp": "2026-03-30T03:00:52.660483Z",
+    "phase": "explain",
+    "summary": "[MOCK_CLUSTER] Anomaly PendingPod (sev=medium). Diagnosis: Mock diagnosis \u2014 PendingPod (severity medium): matches the spec trigger; synthetic describe/logs below. In production, Gemini would expand this.\u2026 Planned action: alert_human. Execution: No kubectl write performed (alert_human).",
+    "action_taken": "alert_human @ Pod/default/pending-pod",
+    "anomaly_type": "PendingPod",
+    "resource_ref": "Pod/default/pending-pod",
+    "planned_action": "alert_human",
+    "execution_detail": "No kubectl write performed (alert_human).",
+    "hitl_involved": false
   }
 ]

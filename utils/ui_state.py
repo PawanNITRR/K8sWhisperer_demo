@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 from pathlib import Path
 from typing import Any
@@ -106,17 +107,68 @@ def _pods_from_cluster(cluster: dict[str, Any] | None) -> list[dict[str, Any]]:
 
 
 def _audit_rows_for_ui(entries: list[Any]) -> list[dict[str, Any]]:
+    # Demo table mapping (matches the screenshot you sent).
+    # We prefer this mapping because older audit_log.json rows may not include
+    # the newer structured fields (`anomaly_type`, `planned_action`).
+    demo_auto_action_by_anomaly: dict[str, str] = {
+        "CrashLoopBackOff": "Fetch logs -> diagnose -> auto restart pod",
+        "OOMKilled": "Read limits -> patch +50% memory -> restart",
+        "PendingPod": "Describe -> check node capacity -> recommend",
+        "ImagePullBackOff": "Extract image -> alert human",
+        "CPUThrottling": "Patch CPU limit upward -> verify throttle drops",
+        "EvictedPod": "Check node pressure -> delete evicted pod",
+        "DeploymentStalled": "Check events -> HITL: rollback or force rollout",
+        "NodeNotReady": "Log metrics -> HITL only -> never auto-drain",
+    }
+
+    known_anomalies = list(demo_auto_action_by_anomaly.keys())
+    # Example of mock summary text:
+    #   [MOCK_CLUSTER] Anomaly CrashLoopBackOff (sev=high). Diagnosis: ...
+    anomaly_regex = re.compile(r"\b(" + "|".join(map(re.escape, known_anomalies)) + r")\b")
+
     rows: list[dict[str, Any]] = []
     for e in entries[-200:]:
         if not isinstance(e, dict):
             continue
-        action = e.get("action_taken")
-        action_s = (action[:160] if isinstance(action, str) else "—") or "—"
+
+        resource = e.get("resource_ref") or e.get("resource") or "cluster"
+
+        # 1) Prefer the newer structured field if present
+        anomaly = e.get("anomaly_type")
+        anomaly_str: str | None = str(anomaly) if anomaly else None
+
+        # 2) Otherwise try to extract anomaly type from the summary text (works for MOCK_CLUSTER)
+        if not anomaly_str:
+            summary_text = e.get("summary") or ""
+            m = anomaly_regex.search(str(summary_text))
+            if m:
+                anomaly_str = m.group(1)
+
+        # 3) Final fallback
+        if not anomaly_str:
+            anomaly_str = str((e.get("phase") or "record")).upper()
+
+        planned = e.get("planned_action")
+        planned_s = str(planned) if planned else None
+
+        # Action column:
+        # - if we know the anomaly, show the screenshot's "Auto-Action" string
+        # - else fall back to planned/plaint text
+        if anomaly_str in demo_auto_action_by_anomaly:
+            action_s = demo_auto_action_by_anomaly[anomaly_str]
+        elif planned_s and resource and resource != "cluster":
+            action_s = f"{planned_s} -> {resource}"
+        elif planned_s:
+            action_s = planned_s
+        else:
+            raw = e.get("action_taken")
+            action_s = (raw[:160] if isinstance(raw, str) else None) or "—"
+
         rows.append(
             {
                 "timestamp": e.get("timestamp"),
-                "resource": e.get("resource") or "cluster",
-                "anomaly_type": (e.get("phase") or "record").upper(),
+                "resource": resource,
+                "anomaly_type": anomaly_str,
                 "action": action_s,
                 "explanation": e.get("summary") or "—",
                 "approved": e.get("approved"),
