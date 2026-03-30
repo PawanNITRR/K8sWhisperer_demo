@@ -9,11 +9,11 @@ description = "Autonomous Kubernetes incident response agent (LangGraph + MCP-st
 readme = "RUNBOOK.md"
 requires-python = ">=3.10"
 dependencies = [
-  "langgraph>=0.2.40",
-  "langchain>=0.3.0",
-  "langchain-core>=0.3.0",
-  "langchain-openai>=0.2.0",
-  "langchain-anthropic>=0.2.0",
+  "langgraph>=0.3.24",
+  "langgraph-checkpoint>=2.0.10",
+  "langchain-core>=0.3.78",
+  "langchain-openai>=0.3.9",
+  "langchain-anthropic>=0.3.0",
   "langchain-google-genai>=2.0.0",
   "pydantic>=2.0",
   "pydantic-settings>=2.0",

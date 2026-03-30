@@ -15,6 +15,38 @@ from webhook.verification import verify_slack_request
 log = get_logger(__name__)
 
 
+def invoke_hitl_resume(graph: Any, thread_id: str, approved: bool) -> None:
+    """Resume LangGraph after HITL (Slack button or dashboard)."""
+    if graph is None:
+        raise HTTPException(status_code=500, detail="graph not initialized")
+    if not thread_id:
+        raise HTTPException(status_code=400, detail="missing thread id")
+    graph.invoke(
+        Command(resume={"approved": approved}),
+        config={"configurable": {"thread_id": thread_id}},
+    )
+
+
+async def dashboard_hitl_interactive(request: Request) -> dict[str, Any]:
+    """JSON body: {\"action\": \"approve\"|\"reject\", \"thread_id\": \"...\"} (dashboard; not Slack)."""
+    settings = get_settings()
+    if not (settings.mock_cluster or settings.dashboard_hitl):
+        raise HTTPException(
+            status_code=403,
+            detail="dashboard HITL disabled; set MOCK_CLUSTER=1 or DASHBOARD_HITL=1",
+        )
+    body = await request.json()
+    action = (body.get("action") or "").strip().lower()
+    thread_id = str(body.get("thread_id") or "").strip()
+    if action not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="action must be approve or reject")
+    if not thread_id:
+        raise HTTPException(status_code=400, detail="missing thread_id")
+    graph = getattr(request.app.state, "graph", None)
+    invoke_hitl_resume(graph, thread_id, action == "approve")
+    return {"ok": True}
+
+
 async def slack_interactions(request: Request) -> dict[str, Any]:
     """
     Slack interactivity endpoint: resumes LangGraph after HITL interrupt.
@@ -58,5 +90,5 @@ async def slack_interactions(request: Request) -> dict[str, Any]:
     if not thread_id:
         raise HTTPException(status_code=400, detail="missing thread id")
 
-    graph.invoke(Command(resume={"approved": approved}), config={"configurable": {"thread_id": thread_id}})
+    invoke_hitl_resume(graph, thread_id, approved)
     return {"ok": True}

@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/* v4 Configuration for custom glass utilities */
+@theme {
+  --color-glass: rgba(255, 255, 255, 0.03);
+  --color-glass-border: rgba(255, 255, 255, 0.05);
+  --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 1);
+}
+
+:root {
+  background: radial-gradient(circle at top left, #1b0066 0%, #0b0217 100%);
+  color: #f8fafc;
+  min-height: 100vh;
+  --grid-color: rgba(255, 255, 255, 0.03);
+}
+
+
+body {
+  margin: 0;
+  background-color: #020617;
+  /* 50px SVG Grid Pattern */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50' viewBox='0 0 50 50'%3E%3Cpath d='M 50 0 L 0 0 0 50' fill='none' stroke='%23ffffff' stroke-width='0.5' stroke-opacity='0.05'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+/* Custom glow for the 'Active' status */
+.glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+}

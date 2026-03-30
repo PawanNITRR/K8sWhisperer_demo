@@ -1,7 +1,7 @@
 import os
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ENV_FILE = os.path.join(os.path.dirname(__file__), ".env")
@@ -42,6 +42,23 @@ class Settings(BaseSettings):
     # API
     api_host: str = "0.0.0.0"
     api_port: int = 8080
+    # Comma-separated origins for browser dashboard (FastAPI CORS)
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174"
+    # Allow JSON POST /slack/interactive from the UI (in addition to Slack); always on when mock_cluster
+    dashboard_hitl: bool = False
+
+    @field_validator("mock_cluster", "dashboard_hitl", mode="before")
+    @classmethod
+    def _coerce_bool(cls, v):  # noqa: ANN001
+        if v is None or isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            s = v.strip().lower()
+            if s in ("1", "true", "yes", "on"):
+                return True
+            if s in ("0", "false", "no", "off", ""):
+                return False
+        return bool(v)
 
     # Audit
     audit_log_path: str = "audit_log.json"

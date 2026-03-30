@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: broken-app-pod
+  labels:
+    app: whisperer-demo
+spec:
+  containers:
+  - name: count-error
+    image: busybox
+    # This command makes the pod crash after 5 seconds
+    command: ["sh", "-c", "echo 'Starting...'; sleep 5; exit 1"]
