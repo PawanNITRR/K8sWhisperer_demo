@@ -5,6 +5,7 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ENV_FILE = os.path.join(os.path.dirname(__file__), ".env")
+_PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 class Settings(BaseSettings):
@@ -61,7 +62,7 @@ class Settings(BaseSettings):
         return bool(v)
 
     # Audit
-    audit_log_path: str = "audit_log.json"
+    audit_log_path: str = os.path.join(_PROJECT_ROOT, "audit_log.json")
 
     # State store (Slack dedupe + thread mapping)
     state_store_path: str = "data/state_store.json"

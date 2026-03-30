@@ -202,12 +202,15 @@ def _audit_rows_for_ui(entries: list[Any]) -> list[dict[str, Any]]:
     return rows
 
 
-def _load_audit_log(path: Path) -> list[dict[str, Any]]:
+def _load_audit_log(path: Path | str) -> list[dict[str, Any]]:
+    if isinstance(path, str):
+        path = Path(path)
     if not path.exists():
         return []
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, IOError):
         return []
     return data if isinstance(data, list) else []
 
